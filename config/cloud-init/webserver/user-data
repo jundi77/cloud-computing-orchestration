@@ -1,0 +1,26 @@
+#cloud-config
+# https://cloudinit.readthedocs.io/en/latest/explanation/about-cloud-config.html
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXHpwbMjYjt2F2CH/7dzSs9g1pyRZ+tvbdz4/Iv6louhc5ijY2p3J3bti0KNIDPuxVyfLH5VqTGdkFLRozLnes4PKXkrelvzOtM4NB721Um8JD6myl7yz2CGZtmwCFHhjaACeFutYHZJDtDBbUA76sKwcBOW0ZGxa9taPZl3bQiY6XbclR5sT3Fw2+u2B9/6DrlMWv7VKpRuzAA9fEPtLhbl4nSNp+tsm5W8JkkwjmhWX0SRyh7uK3X20Ia/n5yf76WmzKMXa/Yiv7/UuPXsol0JmowsOEcDXuW/pL9XMX0sSI66UV5meouuqY/dD6Yy+4nehJzFPuL+oNkE1Ui2VrQSlWEXJdn23QbV/F85smP2yWJclw/X26bPHGRtFB3Z7JgIiE3LL90xeUEP7vhTQ9+Hv7zaY9Yvh2bR1M/wHNuZMRwE7kzBqsz5gNOW19QuYC7qEFZb4XE8O55w1pBNuVgkIKeVesDKC3TKcH0w9zjhOweeUgAC/xi6vp1vbVeoE= terraform-qemu-host
+
+# https://cloudinit.readthedocs.io/en/latest/reference/yaml_examples/set_passwords.html
+chpasswd:
+  expire: false
+  users:
+  - {name: ubuntu, password: ubuntu, type: text}
+ssh_pwauth: true
+
+package_update: true
+packages:
+  - git
+  - python3
+
+runcmd:
+  - git clone https://github.com/rm77/web-sample-6 --depth 1 /home/ubuntu/web-sample-6
+  - python3 -m http.server -d /home/ubuntu/web-sample-6/ &
+
+final_message: "Webserver is up, after $UPTIME seconds"

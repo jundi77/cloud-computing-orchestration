@@ -1,0 +1,18 @@
+---
+libvirt_qemu_uri: "qemu:///system" # default local qemu
+pool_config: "../config/pool"
+domain_config: "../config/domain"
+
+libvirt_pool_name: "ubuntu_cluster"
+libvirt_pool_path: "/var/lib/libvirt/images"
+
+ubuntu_img_url: "../images/noble-server-cloudimg-amd64.img"
+
+webserver_vm_name: "webserver"
+webserver_vm_memory: 512
+webserver_vm_cpu: 1
+
+db_vm_name: "db"
+db_vm_memory: 4096
+db_vm_cpu: 2
+db_vm_disksize: 8192

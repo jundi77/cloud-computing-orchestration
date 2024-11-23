@@ -1,0 +1,77 @@
+---
+- name: Destroy QEMU/KVM libvirt VM
+  hosts: localhost
+  vars_files:
+    - vars.yml
+  tasks:
+    # https://galaxy.ansible.com/ui/repo/published/community/libvirt/content/module/virt_pool/?extIdCarryOver=true&sc_cid=701f2000001OH7YAAW
+    - name: Stop vm webserver
+      ignore_errors: true
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: destroy
+        name: "{{ webserver_vm_name }}"
+    - name: Stop vm db
+      ignore_errors: true
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: destroy
+        name: "{{ db_vm_name }}"
+    - name: Undefine vm webserver
+      ignore_errors: true
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: undefine
+        force: true
+        name: "{{ webserver_vm_name }}"
+    - name: Undefine vm db
+      ignore_errors: true
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: undefine
+        force: true
+        name: "{{ db_vm_name }}"
+    - name: Stop libvirt pool ubuntu_cluster
+      ignore_errors: true
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: destroy
+        name: "{{ libvirt_pool_name }}"
+    - name: Remove file in libvirt pool (base)
+      ignore_errors: true
+      ansible.builtin.file:
+        path: "{{ libvirt_pool_path }}/ubuntu.img"
+        state: absent
+    - name: Remove file in libvirt pool (webserver)
+      ignore_errors: true
+      ansible.builtin.file:
+        path: "{{ libvirt_pool_path }}/{{ webserver_vm_name }}.img"
+        state: absent
+    - name: Remove file in libvirt pool (db)
+      ignore_errors: true
+      ansible.builtin.file:
+        path: "{{ libvirt_pool_path }}/{{ db_vm_name }}.img"
+        state: absent
+    - name: Remove file in libvirt pool (webserver)
+      ignore_errors: true
+      ansible.builtin.file:
+        path: "{{ libvirt_pool_path }}/{{ webserver_vm_name }}_commoninit.iso"
+        state: absent
+    - name: Remove file in libvirt pool (db)
+      ignore_errors: true
+      ansible.builtin.file:
+        path: "{{ libvirt_pool_path }}/{{ db_vm_name }}_commoninit.iso"
+        state: absent
+    - name: Delete libvirt pool ubuntu_cluster
+      ignore_errors: true
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: delete
+        name: "{{ libvirt_pool_name }}"
+    - name: Undefine libvirt pool ubuntu_cluster
+      ignore_errors: true
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: undefine
+        name: "{{ libvirt_pool_name }}"
+    

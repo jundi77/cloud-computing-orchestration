@@ -1,0 +1,47 @@
+#cloud-config
+# https://cloudinit.readthedocs.io/en/latest/explanation/about-cloud-config.html
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXHpwbMjYjt2F2CH/7dzSs9g1pyRZ+tvbdz4/Iv6louhc5ijY2p3J3bti0KNIDPuxVyfLH5VqTGdkFLRozLnes4PKXkrelvzOtM4NB721Um8JD6myl7yz2CGZtmwCFHhjaACeFutYHZJDtDBbUA76sKwcBOW0ZGxa9taPZl3bQiY6XbclR5sT3Fw2+u2B9/6DrlMWv7VKpRuzAA9fEPtLhbl4nSNp+tsm5W8JkkwjmhWX0SRyh7uK3X20Ia/n5yf76WmzKMXa/Yiv7/UuPXsol0JmowsOEcDXuW/pL9XMX0sSI66UV5meouuqY/dD6Yy+4nehJzFPuL+oNkE1Ui2VrQSlWEXJdn23QbV/F85smP2yWJclw/X26bPHGRtFB3Z7JgIiE3LL90xeUEP7vhTQ9+Hv7zaY9Yvh2bR1M/wHNuZMRwE7kzBqsz5gNOW19QuYC7qEFZb4XE8O55w1pBNuVgkIKeVesDKC3TKcH0w9zjhOweeUgAC/xi6vp1vbVeoE= terraform-qemu-host
+
+# https://cloudinit.readthedocs.io/en/latest/reference/yaml_examples/set_passwords.html
+chpasswd:
+  expire: false
+  users:
+  - {name: ubuntu, password: ubuntu, type: text}
+ssh_pwauth: true
+
+growpart:
+  mode: auto
+  devices: ['/']
+
+bootcmd:
+  # https://absprog.com/post/mysql-phpmyadmin-ubuntu-24-04
+  - echo "phpmyadmin phpmyadmin/dbconfig-install boolean false" | sudo debconf-set-selections
+  - echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | sudo  debconf-set-selections
+  # https://serversforhackers.com/c/installing-mysql-with-debconf
+  - echo "mysql-server mysql-server/root_password password rootpassword" | sudo debconf-set-selections
+  - echo "mysql-server mysql-server/root_password_again password rootpassword" | sudo debconf-set-selections
+
+package_update: true
+packages:
+  - mysql-server
+  - phpmyadmin
+
+runcmd:
+  # https://absprog.com/post/mysql-phpmyadmin-ubuntu-24-04
+  # - echo "phpmyadmin phpmyadmin/dbconfig-install boolean false" | sudo debconf-set-selections
+  # - echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | sudo  debconf-set-selections
+  # https://serversforhackers.com/c/installing-mysql-with-debconf
+  # - echo "mysql-server mysql-server/root_password password rootpassword" | sudo debconf-set-selections
+  # - echo "mysql-server mysql-server/root_password_again password rootpassword" | sudo debconf-set-selections
+  # - DEBIAN_FRONTEND=noninteractive && sudo apt-get -y install mysql-server phpmyadmin
+  - systemctl enable mysql
+  - systemctl start mysql
+  - systemctl enable apache2
+  - systemctl start apache2
+
+final_message: "DB is up, after $UPTIME seconds"

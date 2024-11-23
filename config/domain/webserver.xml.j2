@@ -1,0 +1,45 @@
+<!-- https://github.com/libvirt/libvirt-php/blob/master/tests/data/example-qcow2-disk.xml -->
+<!-- https://libvirt.org/formatdomain.html -->
+
+<domain type="kvm">
+  <name>{{ webserver_vm_name }}</name> <!-- must be alphanumeric -->
+  <vcpu>{{ webserver_vm_cpu }}</vcpu>
+  <memory unit="MiB">{{ webserver_vm_memory }}</memory>
+  <currentMemory unit="MiB">{{ webserver_vm_memory }}</currentMemory>
+  <memballoon model='virtio'>
+      <alias name='balloon0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+  </memballoon>
+  <os>
+    <type arch="x86_64">hvm</type>
+    <boot dev="hd"/>
+  </os>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <disk type="file" device="cdrom">
+      <source file="{{ libvirt_pool_path }}/{{ webserver_vm_name }}_commoninit.iso"/>
+      <target dev="hdb" bus="ide"/>
+    </disk>
+    <disk type="file" device="disk">
+      <driver name="qemu" type="qcow2"/>
+      <source file="{{ libvirt_pool_path }}/{{ webserver_vm_name }}.img"/>
+      <target dev="hda" bus="virtio"/>
+      <backingStore type="file">
+        <source file="{{ libvirt_pool_path }}/ubuntu.img"/>
+        <format type="qcow2"/>
+      </backingStore>
+    </disk>
+    <interface type="network">
+      <source network="default" bridge='virbr0'/>
+      <model type='virtio'/>
+    </interface>
+    <serial type="pty">
+      <target port="0"/>
+    </serial> 
+    <console type="pty">
+      <target type="serial" port="0"/>
+    </console>
+  </devices>
+</domain>

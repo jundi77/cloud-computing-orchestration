@@ -1,0 +1,110 @@
+---
+- name: Create QEMU/KVM libvirt VM
+  hosts: localhost
+  vars_files:
+    - vars.yml
+  tasks:
+    # https://galaxy.ansible.com/ui/repo/published/community/libvirt/content/module/virt_pool/?extIdCarryOver=true&sc_cid=701f2000001OH7YAAW
+    - name: "Define libvirt pool ubuntu_cluster"
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "define"
+        name: "{{ libvirt_pool_name }}"
+        xml: "{{ lookup('template', '../config/pool/ubuntu_cluster.xml.j2') }}"
+    - name: "Build libvirt pool ubuntu_cluster"
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "build"
+        name: "{{ libvirt_pool_name }}"
+    - name: "Start libvirt pool ubuntu_cluster"
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "create"
+        name: "{{ libvirt_pool_name }}"
+    - name: "Ensure active libvirt pool ubuntu_cluster"
+      community.libvirt.virt_pool:
+        uri: "{{ libvirt_qemu_uri }}"
+        state: "active"
+        name: "{{ libvirt_pool_name }}"
+    - name: "Create cloud-init webserver ISO"
+      community.general.iso_create:
+        interchange_level: 4
+        src_files:
+          - "../config/cloud-init/webserver/user-data"
+          - "../config/cloud-init/webserver/meta-data"
+        dest_iso: "{{ libvirt_pool_path }}/{{ webserver_vm_name }}_commoninit.iso"
+        vol_ident: cidata
+    - name: "Create cloud-init db ISO"
+      community.general.iso_create:
+        interchange_level: 4
+        src_files:
+          - "../config/cloud-init/db/user-data"
+          - "../config/cloud-init/db/meta-data"
+        dest_iso: "{{ libvirt_pool_path }}/{{ db_vm_name }}_commoninit.iso"
+        vol_ident: cidata
+    - name: "Copy base ubuntu image to libvirt pool"
+      copy:
+        src: "{{ ubuntu_img_url }}"
+        dest: "{{ libvirt_pool_path }}/ubuntu.img"
+        remote_src: no
+    - name: "Create webserver image with ubuntu base"
+      ansible.builtin.command:
+        cmd: >
+          qemu-img create -f qcow2 -F qcow2
+          -o backing_file={{ libvirt_pool_path }}/ubuntu.img
+          {{ libvirt_pool_path }}/{{ webserver_vm_name }}.img
+    - name: "Create db image with ubuntu base"
+      ansible.builtin.command:
+        cmd: >
+          qemu-img create -f qcow2 -F qcow2
+          -o backing_file={{ libvirt_pool_path }}/ubuntu.img
+          {{ libvirt_pool_path }}/{{ db_vm_name }}.img
+    - name: "Resize db image"
+      ansible.builtin.command:
+        cmd: >
+          qemu-img resize
+          {{ libvirt_pool_path }}/{{ db_vm_name }}.img {{ db_vm_disksize }}M
+    - name: "Define vm webserver"
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "define"
+        xml: "{{ lookup('template', '../config/domain/webserver.xml.j2') }}"
+    - name: "Define vm db"
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "define"
+        xml: "{{ lookup('template', '../config/domain/db.xml.j2') }}"
+    - name: "Start vm webserver"
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "start"
+        name: "{{ webserver_vm_name }}"
+    - name: "Start vm db"
+      community.libvirt.virt:
+        uri: "{{ libvirt_qemu_uri }}"
+        command: "start"
+        name: "{{ db_vm_name }}"
+    - name: Get webserver vm ip
+      ignore_errors: true
+      ansible.builtin.command:
+        cmd: "virsh domifaddr {{ webserver_vm_name }}"
+      register: ip_output
+      retries: 15
+      delay: 5
+      until: ip_output.stdout_lines | select('search', 'ipv4') | length > 0
+    - name: Print webserver vm ip
+      ignore_errors: true
+      ansible.builtin.debug:
+        msg: "webserver vm ip: {{ ip_output.stdout_lines | select('search', 'ipv4') | map('split', ' ') | map('last') | first }}"
+    - name: Get db vm ip
+      ignore_errors: true
+      ansible.builtin.command:
+        cmd: "virsh domifaddr {{ db_vm_name }}"
+      register: ip_output
+      retries: 15
+      delay: 5
+      until: ip_output.stdout_lines | select('search', 'ipv4') | length > 0
+    - name: Print db vm ip
+      ignore_errors: true
+      ansible.builtin.debug:
+        msg: "db vm ip: {{ ip_output.stdout_lines | select('search', 'ipv4') | map('split', ' ') | map('last') | first }}"
